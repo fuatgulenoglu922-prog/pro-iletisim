@@ -1,4 +1,4 @@
-# Build Version: 5.0.0 (Strict Build for Debugging)
+# Build Version: 6.0.0 (SHA-1 Reporting)
 name: Build Android APK
 on:
   push:
@@ -26,9 +26,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Build Web Project
-        run: |
-          # Hataları görmek için direkt build alıyoruz
-          npm run build
+        run: npm run build
 
       - name: Setup Capacitor and Build APK
         run: |
@@ -36,6 +34,12 @@ jobs:
             npx cap add android
           fi
           npx cap sync android
+          
+          # SHA-1 RAPORU (BU KODU FIREBASE'E EKLEYECEĞİZ)
+          echo "--- GOOGLE GIRIS ICIN SHA-1 KODUNUZ ASAGIDADIR ---"
+          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep SHA1
+          echo "--- KODU KOPYALAYIP FIREBASE'E YAPISTIRIN ---"
+
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
