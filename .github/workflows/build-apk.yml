@@ -1,7 +1,7 @@
 name: Build Android APK
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Dependencies
         run: npm install
@@ -32,6 +32,9 @@ jobs:
 
       - name: Build Android APK
         run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
