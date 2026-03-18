@@ -1,4 +1,4 @@
-# Build Version: 6.0.0 (SHA-1 Reporting)
+# Build Version: 6.1.0 (Fixed SHA-1 Reporting Order)
 name: Build Android APK
 on:
   push:
@@ -35,14 +35,16 @@ jobs:
           fi
           npx cap sync android
           
-          # SHA-1 RAPORU (BU KODU FIREBASE'E EKLEYECEĞİZ)
-          echo "--- GOOGLE GIRIS ICIN SHA-1 KODUNUZ ASAGIDADIR ---"
-          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep SHA1
-          echo "--- KODU KOPYALAYIP FIREBASE'E YAPISTIRIN ---"
-
           cd android
           chmod +x gradlew
+          
+          # Önce APK'yı oluşturuyoruz (bu işlem debug keystore'u yaratır)
           ./gradlew assembleDebug --no-daemon
+
+          # SHA-1 RAPORUNU YAZDIR (FIREBASE ICIN)
+          echo "--- GOOGLE GIRIS ICIN SHA-1 KODUNUZ ASAGIDADIR ---"
+          ./gradlew signingReport | grep -A 20 "Variant: debug" || true
+          echo "--- YUKARIDAKI SHA1 KODUNU FIREBASE'E YAPISTIRIN ---"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
