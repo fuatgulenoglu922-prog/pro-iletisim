@@ -37,10 +37,17 @@ export default function App() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Redirect dönüşünü kontrol et
-    getRedirectResult(auth).catch((err) => {
-      console.error("Redirect hatası:", err);
-      setError("Giriş yönlendirmesi başarısız: " + err.message);
+    // Mobil giriş dönüşünü yakala
+    getRedirectResult(auth).then((result) => {
+      if (result?.user) {
+        console.log("Redirect girişi başarılı");
+      }
+    }).catch((err) => {
+      if (err.code === 'auth/unauthorized-domain') {
+        setError("HATA: Firebase Console'da 'localhost' alan adı ekli değil!");
+      } else {
+        setError("Giriş Hatası: " + err.message);
+      }
     });
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -63,9 +70,7 @@ export default function App() {
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
             setUser(newUser);
           }
-        } catch (err) {
-          setError("Kullanıcı verisi alınamadı.");
-        }
+        } catch (err) {}
       } else {
         setUser(null);
       }
@@ -80,14 +85,14 @@ export default function App() {
     setLoginLoading(true);
     setError(null);
     try {
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if (isMobile) {
-        await signInWithRedirect(auth, googleProvider);
-      } else {
-        await signInWithPopup(auth, googleProvider);
-      }
+      // Android APK için en sağlam yöntem Redirect'tir
+      await signInWithRedirect(auth, googleProvider);
     } catch (err: any) {
-      setError("Giriş hatası: " + (err.message || "Bilinmeyen hata"));
+      if (err.code === 'auth/unauthorized-domain') {
+        setError("Firebase Console > Authentication > Settings > Authorized Domains kısmına 'localhost' eklemeniz gerekiyor.");
+      } else {
+        setError("Bağlantı Hatası: " + err.message);
+      }
       setLoginLoading(false);
     }
   };
@@ -99,36 +104,22 @@ export default function App() {
   );
 
   if (!user) return (
-    <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#050505] p-6 text-white">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md w-full glass p-8 rounded-3xl text-center space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight">Pro İletişim</h1>
-          <p className="text-white/50">Modern ve profesyonel iletişim.</p>
-        </div>
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#050505] p-6 text-white text-center">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md w-full glass p-8 rounded-3xl space-y-8">
+        <h1 className="text-4xl font-bold">Pro İletişim</h1>
+        <p className="text-white/50 text-sm">Giriş yapabilmek için lütfen bekleyin...</p>
 
         <button
           onClick={handleLogin}
           disabled={loginLoading}
-          className={cn(
-            "w-full pro-gradient p-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all",
-            loginLoading ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.02]"
-          )}
+          className="w-full pro-gradient p-4 rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all"
         >
-          {loginLoading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Giriş Yapılıyor...
-            </>
-          ) : (
-            <>
-              Google ile Giriş Yap
-              <ChevronRight className="w-5 h-5" />
-            </>
-          )}
+          {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Google ile Giriş Yap"}
+          <ChevronRight className="w-5 h-5" />
         </button>
 
         {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-xs">
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] leading-relaxed">
             {error}
           </div>
         )}
@@ -137,9 +128,14 @@ export default function App() {
   );
 
   return (
-    <div className="h-screen w-screen flex bg-[#050505] text-white overflow-hidden">
-      {/* ... (Geri kalan UI aynı kalacak, sadece giriş kısmını düzelttik) ... */}
-      <div className="flex-1 flex items-center justify-center">Giriş Yapıldı! Hoşgeldin {user.displayName}</div>
+    <div className="h-screen w-screen flex bg-[#050505] text-white">
+      <div className="m-auto text-center space-y-4">
+        <div className="w-20 h-20 rounded-full overflow-hidden mx-auto border-2 border-white/10">
+          <img src={user.photoURL} alt="" />
+        </div>
+        <h2 className="text-2xl font-bold">Hoşgeldin, {user.displayName}</h2>
+        <button onClick={() => signOut(auth)} className="px-6 py-2 glass rounded-xl text-xs opacity-50 hover:opacity-100">Çıkış Yap</button>
+      </div>
     </div>
   );
 }
