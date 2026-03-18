@@ -1,4 +1,4 @@
-# Build Version: 4.0.0 (Flexible Build)
+# Build Version: 5.0.0 (Strict Build for Debugging)
 name: Build Android APK
 on:
   push:
@@ -27,24 +27,17 @@ jobs:
 
       - name: Build Web Project
         run: |
-          # Build hatası olsa bile dist klasörünü oluştur ve devam et
-          npm run build || (mkdir -p dist && echo '<html><body>Build Failed but continuing...</body></html>' > dist/index.html)
+          # Hataları görmek için direkt build alıyoruz
+          npm run build
 
       - name: Setup Capacitor and Build APK
         run: |
-          # Eğer android klasörü yoksa oluştur
           if [ ! -d "android" ]; then
             npx cap add android
           fi
-          
-          # Dosyaları kopyala ve eşitle
-          npx cap sync android || true
-          
-          # Android build aracına tam yetki ver
+          npx cap sync android
           cd android
           chmod +x gradlew
-          
-          # APK'yı oluştur
           ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
