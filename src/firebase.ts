@@ -1,14 +1,32 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut, getRedirectResult } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  onAuthStateChanged,
+  signOut,
+  getRedirectResult,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  browserPopupRedirectResolver,
+  browserLocalPersistence
+} from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
 
-// App.tsx içinde lazım olan tüm fonksiyonları buradan export ediyoruz
+// Auth'u daha gelişmiş şekilde başlatıyoruz (Kalıcı oturum için)
+export const auth = initializeAuth(app, {
+  persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+  popupRedirectResolver: browserPopupRedirectResolver
+});
+
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
 export {
   signInWithPopup,
   signInWithRedirect,
@@ -23,17 +41,6 @@ export {
   where,
   onSnapshot,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  browserPopupRedirectResolver
 };
-
-// Test connection
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Lütfen Firebase yapılandırmanızı kontrol edin.");
-    }
-  }
-}
-testConnection();

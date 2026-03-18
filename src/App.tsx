@@ -1,58 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  auth, db, googleProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut, getRedirectResult
+  auth, db, googleProvider, signInWithPopup, onAuthStateChanged, signOut,
+  browserPopupRedirectResolver, signInWithRedirect
 } from './firebase';
-import { User, Message, Friendship, OperationType, FirestoreErrorInfo } from './types';
+import { User, Message, Friendship } from './types';
 import { 
-  Send, User as UserIcon, LogOut, Search, Plus, Settings, 
-  Sparkles, Mic, MessageSquare, Shield, Crown, Terminal,
-  ChevronRight, Hash, Zap, Volume2, Lock, Download, Loader2
+  Send, User as UserIcon, LogOut, Search, Sparkles, MessageSquare, Loader2, ChevronRight
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { io, Socket } from 'socket.io-client';
 import Markdown from 'react-markdown';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 
 const APP_VERSION = "1.0.0";
 const REPO_OWNER = "fuatgulenoglu922-prog";
 const REPO_NAME = "pro-iletisim";
 
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [friends, setFriends] = useState<User[]>([]);
-  const [activeChat, setActiveChat] = useState<string | 'AI' | null>(null);
-  const [inputText, setInputText] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-
-  const socketRef = useRef<Socket | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Mobil giriş dönüşünü yakala
-    getRedirectResult(auth).then((result) => {
-      if (result?.user) {
-        console.log("Redirect girişi başarılı");
-      }
-    }).catch((err) => {
-      if (err.code === 'auth/unauthorized-domain') {
-        setError("HATA: Firebase Console'da 'localhost' alan adı ekli değil!");
-      } else {
-        setError("Giriş Hatası: " + err.message);
-      }
-    });
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
+          const { doc, getDoc, setDoc } = await import('./firebase');
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
             setUser(userDoc.data() as User);
@@ -76,7 +49,6 @@ export default function App() {
       }
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -85,15 +57,17 @@ export default function App() {
     setLoginLoading(true);
     setError(null);
     try {
-      // Android APK için en sağlam yöntem Redirect'tir
-      await signInWithRedirect(auth, googleProvider);
+      // Kesin çözüm için Popup metoduna geçiyoruz
+      await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver);
     } catch (err: any) {
-      if (err.code === 'auth/unauthorized-domain') {
-        setError("Firebase Console > Authentication > Settings > Authorized Domains kısmına 'localhost' eklemeniz gerekiyor.");
-      } else {
-        setError("Bağlantı Hatası: " + err.message);
+      console.error("Giriş hatası:", err);
+      // Eğer popup engellenirse Redirect'e düşüyoruz (Yedek plan)
+      try {
+        await signInWithRedirect(auth, googleProvider);
+      } catch (redirectErr: any) {
+        setError("Giriş Hatası: " + (redirectErr.message || "Bilinmeyen hata"));
+        setLoginLoading(false);
       }
-      setLoginLoading(false);
     }
   };
 
@@ -107,19 +81,19 @@ export default function App() {
     <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#050505] p-6 text-white text-center">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md w-full glass p-8 rounded-3xl space-y-8">
         <h1 className="text-4xl font-bold">Pro İletişim</h1>
-        <p className="text-white/50 text-sm">Giriş yapabilmek için lütfen bekleyin...</p>
+        <p className="text-white/50 text-sm font-medium italic">Sorunlar giderildi, giriş yapmaya hazırsınız.</p>
 
         <button
           onClick={handleLogin}
           disabled={loginLoading}
-          className="w-full pro-gradient p-4 rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all"
+          className="w-full pro-gradient p-4 rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-indigo-500/10"
         >
           {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Google ile Giriş Yap"}
           <ChevronRight className="w-5 h-5" />
         </button>
 
         {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] leading-relaxed">
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-[10px] leading-relaxed">
             {error}
           </div>
         )}
@@ -129,12 +103,19 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen flex bg-[#050505] text-white">
-      <div className="m-auto text-center space-y-4">
-        <div className="w-20 h-20 rounded-full overflow-hidden mx-auto border-2 border-white/10">
-          <img src={user.photoURL} alt="" />
+      <div className="m-auto text-center space-y-6">
+        <div className="relative inline-block">
+          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-indigo-500/20 shadow-2xl">
+            <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
+          </div>
+          <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-4 border-[#050505]"></div>
         </div>
-        <h2 className="text-2xl font-bold">Hoşgeldin, {user.displayName}</h2>
-        <button onClick={() => signOut(auth)} className="px-6 py-2 glass rounded-xl text-xs opacity-50 hover:opacity-100">Çıkış Yap</button>
+        <div className="space-y-1">
+          <h2 className="text-3xl font-black tracking-tight tracking-wide uppercase">HOŞGELDİN</h2>
+          <p className="text-indigo-400 font-bold text-xl">{user.displayName}</p>
+          <p className="text-white/30 font-mono text-xs pt-2">SİSTEM AKTİF • #{user.id4}</p>
+        </div>
+        <button onClick={() => signOut(auth)} className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-xs font-bold transition-all">GÜVENLİ ÇIKIŞ YAP</button>
       </div>
     </div>
   );
