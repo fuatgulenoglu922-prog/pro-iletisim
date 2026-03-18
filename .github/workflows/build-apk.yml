@@ -1,4 +1,4 @@
-# Build Version: 2.0.1 (Forcing Update)
+# Build Version: 3.0.0 (Absolute Fix)
 name: Build Android APK
 on:
   push:
@@ -23,26 +23,27 @@ jobs:
           node-version: 22
 
       - name: Install Dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build Web Project
-        run: |
-          npm run build || (mkdir -p dist && touch dist/index.html && npm run build)
+        run: npm run build
 
       - name: Setup Capacitor and Build APK
         run: |
-          # Android platformunu ekle (yoksa)
+          # Eğer android klasörü yoksa oluştur ve ayarları yap
           if [ ! -d "android" ]; then
             npx cap add android
           fi
           
-          # Dosyaları kopyala ve güncelle
+          # Dosyaları kopyala ve eşitle
           npx cap sync android
           
-          # Android klasörüne git ve APK oluştur
+          # Android build aracına tam yetki ver
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          
+          # APK'yı oluştur (Sessiz modda)
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
