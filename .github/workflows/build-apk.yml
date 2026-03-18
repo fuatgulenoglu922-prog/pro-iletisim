@@ -1,3 +1,4 @@
+# Build Version: 2.0.1 (Forcing Update)
 name: Build Android APK
 on:
   push:
@@ -25,14 +26,17 @@ jobs:
         run: npm install
 
       - name: Build Web Project
-        run: npm run build
+        run: |
+          npm run build || (mkdir -p dist && touch dist/index.html && npm run build)
 
       - name: Setup Capacitor and Build APK
         run: |
           # Android platformunu ekle (yoksa)
-          npx cap add android || true
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
           
-          # Dosyaları kopyala ve eşitle
+          # Dosyaları kopyala ve güncelle
           npx cap sync android
           
           # Android klasörüne git ve APK oluştur
