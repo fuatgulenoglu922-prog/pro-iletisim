@@ -27,14 +27,15 @@ jobs:
       - name: Build Web Project
         run: npm run build
 
-      - name: Capacitor Sync
-        run: npx cap sync
-
-      - name: Build Android APK
+      - name: Setup Capacitor and Build APK
         run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
+          # Android platformunu ekle (yoksa)
+          npx cap add android || true
+          
+          # Dosyaları kopyala ve eşitle
+          npx cap sync android
+          
+          # Android klasörüne git ve APK oluştur
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
