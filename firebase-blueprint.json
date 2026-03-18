@@ -1,0 +1,55 @@
+{
+  "entities": {
+    "User": {
+      "title": "Kullanıcı",
+      "description": "Uygulama kullanıcısı",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string", "description": "Görünen ad" },
+        "email": { "type": "string", "description": "E-posta adresi" },
+        "id4": { "type": "string", "description": "4 haneli benzersiz ID" },
+        "role": { "type": "string", "enum": ["CEO", "Leader", "User"], "description": "Kullanıcı rolü" },
+        "isPro": { "type": "boolean", "description": "Pro özellik durumu" }
+      },
+      "required": ["uid", "displayName", "id4", "role"]
+    },
+    "Message": {
+      "title": "Mesaj",
+      "description": "Kullanıcılar arası mesaj",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string", "description": "Gönderen UID" },
+        "receiverId": { "type": "string", "description": "Alıcı UID veya 'AI'" },
+        "text": { "type": "string", "description": "Mesaj içeriği" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Gönderim zamanı" }
+      },
+      "required": ["senderId", "receiverId", "text", "timestamp"]
+    },
+    "Friendship": {
+      "title": "Arkadaşlık",
+      "description": "Kullanıcılar arası arkadaşlık bağı",
+      "type": "object",
+      "properties": {
+        "user1": { "type": "string", "description": "Birinci kullanıcı UID" },
+        "user2": { "type": "string", "description": "İkinci kullanıcı UID" },
+        "status": { "type": "string", "enum": ["pending", "accepted"], "description": "Arkadaşlık durumu" }
+      },
+      "required": ["user1", "user2", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "Kullanıcı profilleri"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Mesaj geçmişi"
+    },
+    "/friendships/{friendshipId}": {
+      "schema": "Friendship",
+      "description": "Arkadaşlık listesi"
+    }
+  }
+}

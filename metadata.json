@@ -1,0 +1,5 @@
+{
+  "name": "Pro İletişim",
+  "description": "Profesyonel, minimalist ve AI destekli modern iletişim platformu. Kesintisiz mesajlaşma ve gelişmiş özellikler.",
+  "requestFramePermissions": ["microphone"]
+}
