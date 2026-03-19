@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.proiletisim.app',
-  appName: 'Pro Iletisim',
+  appId: 'com.example.app',
+  appName: 'npx cap add android',
   webDir: 'dist'
 };
 
